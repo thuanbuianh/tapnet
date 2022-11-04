@@ -99,7 +99,7 @@ print("Loading dataset", args.dataset, "...")
 model_type = "TapNet" 
 
 for i in range(args.nrun):
-    print(f'=*10 Ratio {args.ratio} - Run {i+1} =*10')
+    print('='*10, f' Ratio {args.ratio} - Run {i+1} ', '='*10)
     if model_type == "TapNet":
         features, labels, idx_train, idx_val, idx_test, nclass = load_raw_ts(args.data_path, dataset=args.dataset, ratio=args.ratio, random_state=i)
 
@@ -193,6 +193,7 @@ for i in range(args.nrun):
 
     # test function
     def test():
+        f = open(f'tapnet_results/{args.dataset}_ratio_{args.ratio}.txt', 'a+')
         output, proto_dist = model(input)
         loss_test = F.cross_entropy(output[idx_test], torch.squeeze(labels[idx_test]))
         if args.use_metric:
@@ -202,6 +203,7 @@ for i in range(args.nrun):
         print(args.dataset, "Test set results:",
             "loss= {:.4f}".format(loss_test.item()),
             "accuracy= {:.4f}".format(acc_test.item()))
+        print("{:.4f}".format(acc_test.item()), file=f)
 
     # Train model
     t_total = time.time()
