@@ -5,6 +5,11 @@ import sklearn.metrics
 import torch
 import pandas as pd
 import random
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import StratifiedShuffleSplit
+from pyts.datasets import fetch_uea_dataset
+import os
+from sktime.datasets import load_from_tsfile
 
 def boolean_string(s):
     if s not in {'False', 'True'}:
@@ -26,14 +31,29 @@ def loaddata(filename):
     return a
 
 
-def load_raw_ts(path, dataset, tensor_format=True):
-    path = path + "raw/" + dataset + "/"
-    x_train = np.load(path + 'X_train.npy')
-    y_train = np.load(path + 'y_train.npy')
-    x_test = np.load(path + 'X_test.npy')
-    y_test = np.load(path + 'y_test.npy')
+def load_raw_ts(path, dataset, ratio, random_state, tensor_format=True):
+    try:
+        x_train, x_test, y_train, y_test = fetch_uea_dataset(dataset, data_home='data/raw/',return_X_y=True)
+    except:
+        path = 'data/raw/'  # Folder with the unzipped dataset
+        x_train, y_train = load_from_tsfile(os.path.join(path, f'{dataset}/{dataset}_TRAIN.ts'), return_data_type="numpy3d")
+        x_test, y_test = load_from_tsfile(os.path.join(path, f'{dataset}/{dataset}_TEST.ts'), return_data_type="numpy3d")
+
+    le = LabelEncoder()
+    y_train = le.fit_transform(y_train)
+    y_test = le.transform(y_test)
+    
+    if ratio < 1:
+        x_train_ori, y_train_ori = x_train, y_train
+        sss = StratifiedShuffleSplit(n_splits=1, test_size=1 - ratio, random_state=random_state)
+        sss.get_n_splits(x_train_ori, y_train_ori)
+
+        for train_index, test_index in sss.split(x_train_ori, y_train_ori):
+            x_train = x_train_ori[train_index,:]
+            y_train = y_train_ori[train_index]   
+    print(y_test)
     ts = np.concatenate((x_train, x_test), axis=0)
-    ts = np.transpose(ts, axes=(0, 2, 1))
+    # ts = np.transpose(ts, axes=(0, 2, 1))
     labels = np.concatenate((y_train, y_test), axis=0)
     nclass = int(np.amax(labels)) + 1
 
@@ -53,7 +73,7 @@ def load_raw_ts(path, dataset, tensor_format=True):
         idx_train = torch.LongTensor(idx_train)
         idx_val = torch.LongTensor(idx_val)
         idx_test = torch.LongTensor(idx_test)
-
+    print(ts.shape)
     return ts, labels, idx_train, idx_val, idx_test, nclass
 
 
