@@ -51,7 +51,7 @@ def load_raw_ts(path, dataset, ratio, random_state, tensor_format=True):
         for train_index, test_index in sss.split(x_train_ori, y_train_ori):
             x_train = x_train_ori[train_index,:]
             y_train = y_train_ori[train_index]   
-    print(y_test)
+
     ts = np.concatenate((x_train, x_test), axis=0)
     # ts = np.transpose(ts, axes=(0, 2, 1))
     labels = np.concatenate((y_train, y_test), axis=0)
