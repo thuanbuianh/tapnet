@@ -66,6 +66,10 @@ parser.add_argument('--dropout', type=float, default=0,
                     help='Dropout rate (1 - keep probability). Default:0.5')
 parser.add_argument('--lstm_dim', type=int, default=128,
                     help='Dimension of LSTM Embedding.')
+parser.add_argument('--ratio', type=float, default=1,
+                        help='percent of training samples used for few-shot learning')
+parser.add_argument('--nrun', type=int, default=1,
+                        help='number of times a model is independently trained')
 
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -94,116 +98,116 @@ print("Loading dataset", args.dataset, "...")
 # Model and optimizer
 model_type = "TapNet" 
 
-if model_type == "TapNet":
+for i in range(args.nrun):
+    print(f'=*10 Ratio {args.ratio} - Run {i+1} =*10')
+    if model_type == "TapNet":
+        features, labels, idx_train, idx_val, idx_test, nclass = load_raw_ts(args.data_path, dataset=args.dataset, ratio=args.ratio, random_state=i)
 
-    features, labels, idx_train, idx_val, idx_test, nclass = load_raw_ts(args.data_path, dataset=args.dataset)
-
-
-    # update random permutation parameter
-    if args.rp_params[0] < 0:
-        dim = features.shape[1]
-        args.rp_params = [3, math.floor(dim / (3 / 2))]
-    else:
-        dim = features.shape[1]
-        args.rp_params[1] = math.floor(dim / args.rp_params[1])
-    
-    args.rp_params = [int(l) for l in args.rp_params]
-    print("rp_params:", args.rp_params)
-
-    # update dilation parameter
-    if args.dilation == -1:
-        args.dilation = math.floor(features.shape[2] / 64)
-
-    print("Data shape:", features.size())
-    model = TapNet(nfeat=features.shape[1],
-                   len_ts=features.shape[2],
-                   layers=args.layers,
-                   nclass=nclass,
-                   dropout=args.dropout,
-                   use_lstm=args.use_lstm,
-                   use_cnn=args.use_cnn,
-                   filters=args.filters,
-                   dilation=args.dilation,
-                   kernels=args.kernels,
-                   use_metric=args.use_metric,
-                   use_rp=args.use_rp,
-                   rp_params=args.rp_params,
-                   lstm_dim=args.lstm_dim
-                   )
-   
-    # cuda
-    if args.cuda:
-        #model = nn.DataParallel(model) Used when you have more than one GPU. Sometimes work but not stable
-        model.cuda()
-        features, labels, idx_train = features.cuda(), labels.cuda(), idx_train.cuda()
-    input = (features, labels, idx_train, idx_val, idx_test)
-
-# init the optimizer
-optimizer = optim.Adam(model.parameters(),
-                       lr=args.lr, weight_decay=args.wd)
-
-
-# training function
-def train():
-    loss_list = [sys.maxsize]
-    test_best_possible, best_so_far = 0.0, sys.maxsize
-    for epoch in range(args.epochs):
-
-        t = time.time()
-        model.train()
-        optimizer.zero_grad()
-
-        output, proto_dist = model(input)
-
-        loss_train = F.cross_entropy(output[idx_train], torch.squeeze(labels[idx_train]))
-        if args.use_metric:
-            loss_train = loss_train + args.metric_param * proto_dist
-
-        if abs(loss_train.item() - loss_list[-1]) < args.stop_thres \
-                or loss_train.item() > loss_list[-1]:
-            break
+        # update random permutation parameter
+        if args.rp_params[0] < 0:
+            dim = features.shape[1]
+            args.rp_params = [3, math.floor(dim / (3 / 2))]
         else:
-            loss_list.append(loss_train.item())
+            dim = features.shape[1]
+            args.rp_params[1] = math.floor(dim / args.rp_params[1])
+        
+        args.rp_params = [int(l) for l in args.rp_params]
+        print("rp_params:", args.rp_params)
 
-        acc_train = accuracy(output[idx_train], labels[idx_train])
-        loss_train.backward()
-        optimizer.step()
+        # update dilation parameter
+        if args.dilation == -1:
+            args.dilation = math.floor(features.shape[2] / 64)
 
-        loss_val = F.cross_entropy(output[idx_val], torch.squeeze(labels[idx_val]))
-        acc_val = accuracy(output[idx_val], labels[idx_val])
+        print("Data shape:", features.size())
+        model = TapNet(nfeat=features.shape[1],
+                    len_ts=features.shape[2],
+                    layers=args.layers,
+                    nclass=nclass,
+                    dropout=args.dropout,
+                    use_lstm=args.use_lstm,
+                    use_cnn=args.use_cnn,
+                    filters=args.filters,
+                    dilation=args.dilation,
+                    kernels=args.kernels,
+                    use_metric=args.use_metric,
+                    use_rp=args.use_rp,
+                    rp_params=args.rp_params,
+                    lstm_dim=args.lstm_dim
+                    )
+    
+        # cuda
+        if args.cuda:
+            #model = nn.DataParallel(model) Used when you have more than one GPU. Sometimes work but not stable
+            model.cuda()
+            features, labels, idx_train = features.cuda(), labels.cuda(), idx_train.cuda()
+        input = (features, labels, idx_train, idx_val, idx_test)
 
-        print('Epoch: {:04d}'.format(epoch + 1),
-              'loss_train: {:.8f}'.format(loss_train.item()),
-              'acc_train: {:.4f}'.format(acc_train.item()),
-              'loss_val: {:.4f}'.format(loss_val.item()),
-              'acc_val: {:.4f}'.format(acc_val.item()),
-              'time: {:.4f}s'.format(time.time() - t))
+    # init the optimizer
+    optimizer = optim.Adam(model.parameters(),
+                        lr=args.lr, weight_decay=args.wd)
 
-        if acc_val.item() > test_best_possible:
-            test_best_possible = acc_val.item()
-        if best_so_far > loss_train.item():
-            best_so_far = loss_train.item()
-            test_acc = acc_val.item()
-    print("test_acc: " + str(test_acc))
-    print("best possible: " + str(test_best_possible))
 
-# test function
-def test():
-    output, proto_dist = model(input)
-    loss_test = F.cross_entropy(output[idx_test], torch.squeeze(labels[idx_test]))
-    if args.use_metric:
-        loss_test = loss_test - args.metric_param * proto_dist
+    # training function
+    def train():
+        loss_list = [sys.maxsize]
+        test_best_possible, best_so_far = 0.0, sys.maxsize
+        for epoch in range(args.epochs):
 
-    acc_test = accuracy(output[idx_test], labels[idx_test])
-    print(args.dataset, "Test set results:",
-          "loss= {:.4f}".format(loss_test.item()),
-          "accuracy= {:.4f}".format(acc_test.item()))
+            t = time.time()
+            model.train()
+            optimizer.zero_grad()
 
-# Train model
-t_total = time.time()
-train()
-print("Optimization Finished!")
-print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
+            output, proto_dist = model(input)
 
-# Testing
-test()
+            loss_train = F.cross_entropy(output[idx_train], torch.squeeze(labels[idx_train]))
+            if args.use_metric:
+                loss_train = loss_train + args.metric_param * proto_dist
+
+            if abs(loss_train.item() - loss_list[-1]) < args.stop_thres \
+                    or loss_train.item() > loss_list[-1]:
+                break
+            else:
+                loss_list.append(loss_train.item())
+
+            acc_train = accuracy(output[idx_train], labels[idx_train])
+            loss_train.backward()
+            optimizer.step()
+
+            loss_val = F.cross_entropy(output[idx_val], torch.squeeze(labels[idx_val]))
+            acc_val = accuracy(output[idx_val], labels[idx_val])
+
+            print('Epoch: {:04d}'.format(epoch + 1),
+                'loss_train: {:.8f}'.format(loss_train.item()),
+                'acc_train: {:.4f}'.format(acc_train.item()),
+                'loss_val: {:.4f}'.format(loss_val.item()),
+                'acc_val: {:.4f}'.format(acc_val.item()),
+                'time: {:.4f}s'.format(time.time() - t))
+
+            if acc_val.item() > test_best_possible:
+                test_best_possible = acc_val.item()
+            if best_so_far > loss_train.item():
+                best_so_far = loss_train.item()
+                test_acc = acc_val.item()
+        print("test_acc: " + str(test_acc))
+        print("best possible: " + str(test_best_possible))
+
+    # test function
+    def test():
+        output, proto_dist = model(input)
+        loss_test = F.cross_entropy(output[idx_test], torch.squeeze(labels[idx_test]))
+        if args.use_metric:
+            loss_test = loss_test - args.metric_param * proto_dist
+
+        acc_test = accuracy(output[idx_test], labels[idx_test])
+        print(args.dataset, "Test set results:",
+            "loss= {:.4f}".format(loss_test.item()),
+            "accuracy= {:.4f}".format(acc_test.item()))
+
+    # Train model
+    t_total = time.time()
+    train()
+    print("Optimization Finished!")
+    print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
+
+    # Testing
+    test()
