@@ -206,10 +206,11 @@ for i in range(args.nrun):
         print("{:.4f}".format(acc_test.item()), file=f)
 
     # Train model
+    f = open(f'tapnet_results/{args.dataset}_ratio_{args.ratio}_rt.txt', 'a+')
     t_total = time.time()
     train()
     print("Optimization Finished!")
-    print("Total time elapsed: {:.4f}s".format(time.time() - t_total))
+    print("{:.4f}".format(time.time() - t_total), file=f)
 
     # Testing
     test()

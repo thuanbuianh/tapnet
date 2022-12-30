@@ -73,7 +73,7 @@ def load_raw_ts(path, dataset, ratio, random_state, tensor_format=True):
         idx_train = torch.LongTensor(idx_train)
         idx_val = torch.LongTensor(idx_val)
         idx_test = torch.LongTensor(idx_test)
-    print(ts.shape)
+
     return ts, labels, idx_train, idx_val, idx_test, nclass
 
 
