@@ -149,15 +149,15 @@ class shrunk_centroid:
         """
         Creating the centroid for each class
         """
-        #y = X.class_vals
-        #X.drop('class_vals', axis = 1, inplace = True)
+        # y = X.class_vals
+        # X.drop('class_vals', axis = 1, inplace = True)
         cols = X.columns.to_list()   
         ts = from_nested_to_3d_numpy(X) # Contains TS in numpy format
         centroids = []
         temp = []
 
-        # le = LabelEncoder()
-        # y_ind = le.fit_transform(y)
+        le = LabelEncoder()
+        y_ind = le.fit_transform(y)
 
         #print(dict(zip(le.classes_, le.transform(le.classes_))))
 
@@ -166,31 +166,31 @@ class shrunk_centroid:
             train  = ts[:, dim, :]
             if center == "mean":
                 clf = NearestCentroid(shrink_threshold = self.shrink)
-                clf.fit(train, y)
+                clf.fit(train, y_ind)
                 centroids.append(clf.centroids_)
 
             elif center == "median":
-                ch_median = self._class_median(train, y)
+                ch_median = self._class_median(train, y_ind)
                 centroids.append(ch_median)
 
             elif center == "madc":
-                ch_median = self._class_medianc(train, y)
+                ch_median = self._class_medianc(train, y_ind)
                 centroids.append(ch_median)
             
             elif center == "mad":
-                ch_mad = self._class_mad_median(train, y)
+                ch_mad = self._class_mad_median(train, y_ind)
                 centroids.append(ch_mad)
 
             elif center == "madshrink":
-                train = self._shrink_median(train, y)
+                train = self._shrink_median(train, y_ind)
                 clf = MC(shrink_threshold=self.shrink)
-                clf.fit(train, y)
+                clf.fit(train, y_ind)
                 centroids.append(clf.centroids_)
                 #print(centroids)
                 #centroids.append(ch_mad)
                 
             elif center == "std":
-                ch_std = self._class_std(train, y)
+                ch_std = self._class_std(train, y_ind)
                 centroids.append(ch_std)
             #break
             #std = self._class_std(train, y_ind)
@@ -211,7 +211,7 @@ class shrunk_centroid:
             print("FFT transformation done...")
             centroid_frame = centroid_frame.applymap(self._fft)
 
-        # centroid_frame['class_vals'] = le.classes_ 
+        centroid_frame['class_vals'] = le.classes_ 
         
         return centroid_frame.reset_index(drop =True)
 

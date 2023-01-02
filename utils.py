@@ -9,7 +9,10 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedShuffleSplit
 from pyts.datasets import fetch_uea_dataset
 import os
-from sktime.datasets import load_from_tsfile
+from sktime.datasets import load_from_tsfile, load_from_tsfile_to_dataframe
+from sktime.datatypes._panel._convert import from_nested_to_3d_numpy, from_3d_numpy_to_nested
+from channel_selection.classelbow import ElbowPair # ECP
+from channel_selection.elbow import elbow # ECS..
 
 def boolean_string(s):
     if s not in {'False', 'True'}:
@@ -31,13 +34,29 @@ def loaddata(filename):
     return a
 
 
-def load_raw_ts(path, dataset, ratio, random_state, tensor_format=True):
+def load_raw_ts(path, dataset, cs_method, center, ratio, random_state, tensor_format=True):
     try:
         x_train, x_test, y_train, y_test = fetch_uea_dataset(dataset, data_home='data/raw/',return_X_y=True)
+        x_train = from_3d_numpy_to_nested(np.stack((x_train,1)))
+        x_test = from_3d_numpy_to_nested(np.stack((x_test,1)))
     except:
         path = 'data/raw/'  # Folder with the unzipped dataset
-        x_train, y_train = load_from_tsfile(os.path.join(path, f'{dataset}/{dataset}_TRAIN.ts'), return_data_type="numpy3d")
-        x_test, y_test = load_from_tsfile(os.path.join(path, f'{dataset}/{dataset}_TEST.ts'), return_data_type="numpy3d")
+        # x_train, y_train = load_from_tsfile(os.path.join(path, f'{dataset}/{dataset}_TRAIN.ts'), return_data_type="numpy3d")
+        # x_test, y_test = load_from_tsfile(os.path.join(path, f'{dataset}/{dataset}_TEST.ts'), return_data_type="numpy3d")
+        x_train, y_train = load_from_tsfile_to_dataframe(os.path.join(path, f'{dataset}/{dataset}_TRAIN.ts'))
+        x_test, y_test = load_from_tsfile_to_dataframe(os.path.join(path, f'{dataset}/{dataset}_TEST.ts'))
+
+    # le = LabelEncoder()
+    # y_train = le.fit_transform(y_train)
+    # y_test = le.transform(y_test)
+
+    if cs_method:
+        elb = elbow(distance = 'eu', center=center) if cs_method == 'ecs' else ElbowPair(distance = 'eu', center=center)
+        elb = elb.fit(x_train, y_train)
+        x_train = elb.transform(x_train)
+        x_test = elb.transform(x_test)
+    x_train = from_nested_to_3d_numpy(x_train)
+    x_test = from_nested_to_3d_numpy(x_test)
 
     le = LabelEncoder()
     y_train = le.fit_transform(y_train)

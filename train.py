@@ -70,6 +70,10 @@ parser.add_argument('--ratio', type=float, default=1,
                         help='percent of training samples used for few-shot learning')
 parser.add_argument('--nrun', type=int, default=1,
                         help='number of times a model is independently trained')
+parser.add_argument('--channel_selection', default=None, choices=['ecp', 'ecs', None],
+                        help='channel selection methods in Scalable Classifier-Agnostic Channel Selection for Multivariate Time Series Classification')
+parser.add_argument('--center', default='mean', choices=['mean', 'mad', 'median', 'madc'],
+                        help='centroid type for channel selection method')             
 
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -101,7 +105,8 @@ model_type = "TapNet"
 for i in range(args.nrun):
     print('='*10, f' Ratio {args.ratio} - Run {i+1} ', '='*10)
     if model_type == "TapNet":
-        features, labels, idx_train, idx_val, idx_test, nclass = load_raw_ts(args.data_path, dataset=args.dataset, ratio=args.ratio, random_state=i)
+        features, labels, idx_train, idx_val, idx_test, nclass = load_raw_ts(args.data_path, dataset=args.dataset, cs_method=args.channel_selection, 
+                                                                             center=args.center, ratio=args.ratio, random_state=i)
 
         # update random permutation parameter
         if args.rp_params[0] < 0:
