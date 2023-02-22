@@ -36,6 +36,16 @@ parser.add_argument('--wd', type=float, default=1e-3,
 parser.add_argument('--stop_thres', type=float, default=1e-9,
                     help='The stop threshold for the training error. If the difference between training losses '
                          'between epoches are less than the threshold, the training will be stopped. Default:1e-9')
+# parser.add_argument('--ratio', type=float, default=1,
+#                         help='percent of training samples used for few-shot learning')
+parser.add_argument('--nshot', type=int, default=-1,
+                        help='number of training samples used for few-shot learning, -1 means all samples in training set are used')
+parser.add_argument('--nrun', type=int, default=1,
+                        help='number of times a model is independently trained')
+parser.add_argument('--channel_selection', default=None, choices=['ecp', 'ecs', None],
+                        help='channel selection methods in Scalable Classifier-Agnostic Channel Selection for Multivariate Time Series Classification')
+parser.add_argument('--center', default=None, choices=['mean', 'mad', 'median', 'madc', None],
+                        help='centroid type for channel selection method')   
 
 # Model parameters
 
@@ -65,15 +75,7 @@ parser.add_argument('--layers', type=str, default="500,300",
 parser.add_argument('--dropout', type=float, default=0,
                     help='Dropout rate (1 - keep probability). Default:0.5')
 parser.add_argument('--lstm_dim', type=int, default=128,
-                    help='Dimension of LSTM Embedding.')
-parser.add_argument('--ratio', type=float, default=1,
-                        help='percent of training samples used for few-shot learning')
-parser.add_argument('--nrun', type=int, default=1,
-                        help='number of times a model is independently trained')
-parser.add_argument('--channel_selection', default=None, choices=['ecp', 'ecs', None],
-                        help='channel selection methods in Scalable Classifier-Agnostic Channel Selection for Multivariate Time Series Classification')
-parser.add_argument('--center', default='mean', choices=['mean', 'mad', 'median', 'madc'],
-                        help='centroid type for channel selection method')             
+                    help='Dimension of LSTM Embedding.')          
 
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -106,7 +108,7 @@ for i in range(args.nrun):
     print('='*10, f' Ratio {args.ratio} - Run {i+1} ', '='*10)
     if model_type == "TapNet":
         features, labels, idx_train, idx_val, idx_test, nclass = load_raw_ts(args.data_path, dataset=args.dataset, cs_method=args.channel_selection, 
-                                                                             center=args.center, ratio=args.ratio, random_state=i)
+                                                                             center=args.center, nshot=args.nshot, random_state=i)
 
         # update random permutation parameter
         if args.rp_params[0] < 0:

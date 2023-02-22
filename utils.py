@@ -9,7 +9,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedShuffleSplit
 from pyts.datasets import fetch_uea_dataset
 import os
-from sktime.datasets import load_from_tsfile, load_from_tsfile_to_dataframe
+from sktime.datasets import load_from_tsfile_to_dataframe
 from sktime.datatypes._panel._convert import from_nested_to_3d_numpy, from_3d_numpy_to_nested
 from channel_selection.classelbow import ElbowPair # ECP
 from channel_selection.elbow import elbow # ECS..
@@ -34,21 +34,15 @@ def loaddata(filename):
     return a
 
 
-def load_raw_ts(path, dataset, cs_method, center, ratio, random_state, tensor_format=True):
+def load_raw_ts(path, dataset, cs_method, center, nshot, random_state, tensor_format=True):
     try:
         x_train, x_test, y_train, y_test = fetch_uea_dataset(dataset, data_home='data/raw/',return_X_y=True)
         x_train = from_3d_numpy_to_nested(np.stack((x_train,1)))
         x_test = from_3d_numpy_to_nested(np.stack((x_test,1)))
     except:
         path = 'data/raw/'  # Folder with the unzipped dataset
-        # x_train, y_train = load_from_tsfile(os.path.join(path, f'{dataset}/{dataset}_TRAIN.ts'), return_data_type="numpy3d")
-        # x_test, y_test = load_from_tsfile(os.path.join(path, f'{dataset}/{dataset}_TEST.ts'), return_data_type="numpy3d")
         x_train, y_train = load_from_tsfile_to_dataframe(os.path.join(path, f'{dataset}/{dataset}_TRAIN.ts'))
         x_test, y_test = load_from_tsfile_to_dataframe(os.path.join(path, f'{dataset}/{dataset}_TEST.ts'))
-
-    # le = LabelEncoder()
-    # y_train = le.fit_transform(y_train)
-    # y_test = le.transform(y_test)
 
     if cs_method:
         elb = elbow(distance = 'eu', center=center) if cs_method == 'ecs' else ElbowPair(distance = 'eu', center=center)
@@ -62,14 +56,15 @@ def load_raw_ts(path, dataset, cs_method, center, ratio, random_state, tensor_fo
     y_train = le.fit_transform(y_train)
     y_test = le.transform(y_test)
     
-    if ratio < 1:
+    if nshot > -1:
         x_train_ori, y_train_ori = x_train, y_train
-        sss = StratifiedShuffleSplit(n_splits=1, test_size=1 - ratio, random_state=random_state)
+        sss = StratifiedShuffleSplit(n_splits=1, train_size=nshot*len(np.unique(y_train_ori)), random_state=random_state)
         sss.get_n_splits(x_train_ori, y_train_ori)
 
         for train_index, test_index in sss.split(x_train_ori, y_train_ori):
             x_train = x_train_ori[train_index,:]
-            y_train = y_train_ori[train_index]   
+            y_train = y_train_ori[train_index]  
+
 
     ts = np.concatenate((x_train, x_test), axis=0)
     # ts = np.transpose(ts, axes=(0, 2, 1))
