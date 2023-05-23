@@ -4,6 +4,28 @@ import torch.nn.functional as F
 from utils import euclidean_dist, normalize, output_conv_size, dump_embedding
 import numpy as np
 
+class SeBlock(nn.Module):
+    def __init__(self, in_channels, r):
+        super().__init__()
+        C = in_channels
+        self.globpool = nn.AdaptiveAvgPool1d(1)
+        self.fc1 = nn.Linear(C, C//r, bias=False)
+        self.fc2 = nn.Linear(C//r, C, bias=False)
+        self.relu = nn.ReLU()
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        # x shape: [N, C, L]
+        f = self.globpool(x)
+        f = torch.flatten(f,1)
+        f = self.relu(self.fc1(f))
+        f = self.sigmoid(self.fc2(f))
+        f = f[:,:,None]
+        # f shape: [N, C, 1]
+
+        scale = x * f
+        return scale
+
 class TapNet(nn.Module):
 
     def __init__(self, nfeat, len_ts, nclass, dropout, filters, kernels, dilation, layers, use_rp, rp_params,
@@ -14,6 +36,7 @@ class TapNet(nn.Module):
         self.use_metric = use_metric
         self.use_lstm = use_lstm
         self.use_cnn = use_cnn
+        self.seblock = SeBlock(filters[2])
 
         # parameters for random projection
         self.use_rp = use_rp
@@ -120,6 +143,7 @@ class TapNet(nn.Module):
                         x_conv = self.conv_3(x_conv)
                         x_conv = self.conv_bn_3(x_conv)
                         x_conv = F.leaky_relu(x_conv)
+                        x_conv = self.seblock(x_conv)
 
                         x_conv = torch.mean(x_conv, 2)
 
@@ -142,6 +166,7 @@ class TapNet(nn.Module):
                     x_conv = self.conv_3(x_conv)
                     x_conv = self.conv_bn_3(x_conv)
                     x_conv = F.leaky_relu(x_conv)
+                    x_conv = self.seblock(x_conv)
 
                     x_conv = x_conv.view(N, -1)
 
@@ -182,5 +207,3 @@ class TapNet(nn.Module):
 
         dump_embedding(x_proto, x, labels)
         return torch.exp(-0.5*dists), proto_dist
-
-
