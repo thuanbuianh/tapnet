@@ -135,10 +135,12 @@ class TapNet(nn.Module):
                         x_conv = self.conv_1_models[i](x[:, self.idx[i], :])
                         x_conv = self.conv_bn_1(x_conv)
                         x_conv = F.leaky_relu(x_conv)
+                        x_conv = self.seblock(x_conv)
 
                         x_conv = self.conv_2(x_conv)
                         x_conv = self.conv_bn_2(x_conv)
                         x_conv = F.leaky_relu(x_conv)
+                        x_conv = self.seblock(x_conv)
 
                         x_conv = self.conv_3(x_conv)
                         x_conv = self.conv_bn_3(x_conv)
@@ -158,10 +160,12 @@ class TapNet(nn.Module):
                     x_conv = self.conv_1(x_conv)  # N * C * L
                     x_conv = self.conv_bn_1(x_conv)
                     x_conv = F.leaky_relu(x_conv)
+                    x_conv = self.seblock(x_conv)
 
                     x_conv = self.conv_2(x_conv)
                     x_conv = self.conv_bn_2(x_conv)
                     x_conv = F.leaky_relu(x_conv)
+                    x_conv = self.seblock(x_conv)
 
                     x_conv = self.conv_3(x_conv)
                     x_conv = self.conv_bn_3(x_conv)
