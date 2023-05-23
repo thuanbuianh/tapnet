@@ -180,7 +180,7 @@ for i in range(args.nrun):
             loss_train.backward()
             optimizer.step()
 
-            loss_val = F.cross_entropy(output[idx_val], torch.squeeze(labels[idx_val]))
+            loss_val = F.cross_entropy(output[idx_val], torch.squeeze(labels[idx_val]), label_smoothing=0.05)
             acc_val = accuracy(output[idx_val], labels[idx_val])
 
             print('Epoch: {:04d}'.format(epoch + 1),
