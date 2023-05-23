@@ -6,6 +6,7 @@ import torch
 import pandas as pd
 import random
 from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import StratifiedShuffleSplit
 from pyts.datasets import fetch_uea_dataset
 import os
@@ -18,7 +19,13 @@ def boolean_string(s):
     if s not in {'False', 'True'}:
         raise ValueError('Not a valid boolean string')
     return s == 'True'
+def standardise(data, mean=None, std=None):
+    if not mean:
+        mean = np.expand_dims(np.mean(data, axis=2), axis=2)
+    if not std:    
+        std = np.expand_dims(np.std(data, axis=2), axis=2)
 
+    return (data - mean) / std, mean, std
 def encode_onehot(labels):
     classes = set(labels)
     classes_dict = {c: np.identity(len(classes))[i, :] for i, c in
@@ -35,23 +42,24 @@ def loaddata(filename):
 
 
 def load_raw_ts(path, dataset, cs_method, center, nshot, random_state, tensor_format=True):
-    try:
-        x_train, x_test, y_train, y_test = fetch_uea_dataset(dataset, data_home='data/raw/',return_X_y=True)
-        x_train = from_3d_numpy_to_nested(np.stack((x_train,1)))
-        x_test = from_3d_numpy_to_nested(np.stack((x_test,1)))
-    except:
-        path = 'data/raw/'  # Folder with the unzipped dataset
-        x_train, y_train = load_from_tsfile_to_dataframe(os.path.join(path, f'{dataset}/{dataset}_TRAIN.ts'))
-        x_test, y_test = load_from_tsfile_to_dataframe(os.path.join(path, f'{dataset}/{dataset}_TEST.ts'))
+    # try:
+    x_train, x_test, y_train, y_test = fetch_uea_dataset(dataset, data_home='data/raw/',return_X_y=True)
+        # x_train = from_3d_numpy_to_nested(np.stack((x_train,1)))
+        # x_test = from_3d_numpy_to_nested(np.stack((x_test,1)))
+    # except:
+    #     path = 'data/raw/'  # Folder with the unzipped dataset
+    #     x_train, y_train = load_from_tsfile_to_dataframe(os.path.join(path, f'{dataset}/{dataset}_TRAIN.ts'))
+    #     x_test, y_test = load_from_tsfile_to_dataframe(os.path.join(path, f'{dataset}/{dataset}_TEST.ts'))
 
     # if cs_method:
     #     elb = elbow(distance = 'eu', center=center) if cs_method == 'ecs' else ElbowPair(distance = 'eu', center=center)
     #     elb = elb.fit(x_train, y_train)
     #     x_train = elb.transform(x_train)
     #     x_test = elb.transform(x_test)
-    x_train = from_nested_to_3d_numpy(x_train)
-    x_test = from_nested_to_3d_numpy(x_test)
-
+    # x_train = from_nested_to_3d_numpy(x_train)
+    # x_test = from_nested_to_3d_numpy(x_test)
+    x_train, mean, std = standardise(x_train)
+    x_test, _, _ = standardise(x_test, mean, std)
     le = LabelEncoder()
     y_train = le.fit_transform(y_train)
     y_test = le.transform(y_test)
