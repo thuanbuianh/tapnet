@@ -44,11 +44,11 @@ def load_raw_ts(path, dataset, cs_method, center, nshot, random_state, tensor_fo
         x_train, y_train = load_from_tsfile_to_dataframe(os.path.join(path, f'{dataset}/{dataset}_TRAIN.ts'))
         x_test, y_test = load_from_tsfile_to_dataframe(os.path.join(path, f'{dataset}/{dataset}_TEST.ts'))
 
-    if cs_method:
-        elb = elbow(distance = 'eu', center=center) if cs_method == 'ecs' else ElbowPair(distance = 'eu', center=center)
-        elb = elb.fit(x_train, y_train)
-        x_train = elb.transform(x_train)
-        x_test = elb.transform(x_test)
+    # if cs_method:
+    #     elb = elbow(distance = 'eu', center=center) if cs_method == 'ecs' else ElbowPair(distance = 'eu', center=center)
+    #     elb = elb.fit(x_train, y_train)
+    #     x_train = elb.transform(x_train)
+    #     x_test = elb.transform(x_test)
     x_train = from_nested_to_3d_numpy(x_train)
     x_test = from_nested_to_3d_numpy(x_test)
 
@@ -56,14 +56,14 @@ def load_raw_ts(path, dataset, cs_method, center, nshot, random_state, tensor_fo
     y_train = le.fit_transform(y_train)
     y_test = le.transform(y_test)
     
-    if nshot > -1:
-        x_train_ori, y_train_ori = x_train, y_train
-        sss = StratifiedShuffleSplit(n_splits=1, train_size=nshot*len(np.unique(y_train_ori)), random_state=random_state)
-        sss.get_n_splits(x_train_ori, y_train_ori)
+    # if nshot > -1:
+    #     x_train_ori, y_train_ori = x_train, y_train
+    #     sss = StratifiedShuffleSplit(n_splits=1, train_size=nshot*len(np.unique(y_train_ori)), random_state=random_state)
+    #     sss.get_n_splits(x_train_ori, y_train_ori)
 
-        for train_index, test_index in sss.split(x_train_ori, y_train_ori):
-            x_train = x_train_ori[train_index,:]
-            y_train = y_train_ori[train_index]  
+    #     for train_index, test_index in sss.split(x_train_ori, y_train_ori):
+    #         x_train = x_train_ori[train_index,:]
+    #         y_train = y_train_ori[train_index]  
 
 
     ts = np.concatenate((x_train, x_test), axis=0)

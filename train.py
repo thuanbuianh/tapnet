@@ -202,7 +202,7 @@ for i in range(args.nrun):
     def test():
         f = open(f'tapnet_results/{args.dataset}_nshot_{args.nshot}.txt', 'a+')
         output, proto_dist = model(input)
-        loss_test = F.cross_entropy(output[idx_test], torch.squeeze(labels[idx_test]))
+        loss_test = F.cross_entropy(output[idx_test], torch.squeeze(labels[idx_test]), label_smoothing=0.05)
         if args.use_metric:
             loss_test = loss_test - args.metric_param * proto_dist
 
