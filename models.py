@@ -5,7 +5,7 @@ from utils import euclidean_dist, normalize, output_conv_size, dump_embedding
 import numpy as np
 
 class SeBlock(nn.Module):
-    def __init__(self, in_channels, r):
+    def __init__(self, in_channels, r=16):
         super().__init__()
         C = in_channels
         self.globpool = nn.AdaptiveAvgPool1d(1)
@@ -36,7 +36,6 @@ class TapNet(nn.Module):
         self.use_metric = use_metric
         self.use_lstm = use_lstm
         self.use_cnn = use_cnn
-        self.seblock = SeBlock(filters[2])
 
         # parameters for random projection
         self.use_rp = use_rp
@@ -61,14 +60,17 @@ class TapNet(nn.Module):
                 self.conv_1 = nn.Conv1d(self.channel, filters[0], kernel_size=kernels[0], dilation=dilation, stride=1, padding=paddings[0])
 
             self.conv_bn_1 = nn.BatchNorm1d(filters[0])
+            self.seblock_1 = SeBlock(filters[0])
 
             self.conv_2 = nn.Conv1d(filters[0], filters[1], kernel_size=kernels[1], stride=1, padding=paddings[1])
 
             self.conv_bn_2 = nn.BatchNorm1d(filters[1])
+            self.seblock_2 = SeBlock(filters[1])
 
             self.conv_3 = nn.Conv1d(filters[1], filters[2], kernel_size=kernels[2], stride=1, padding=paddings[2])
 
             self.conv_bn_3 = nn.BatchNorm1d(filters[2])
+            self.seblock_3 = SeBlock(filters[2])
 
             # compute the size of input for fully connected layers
             fc_input = 0
@@ -135,17 +137,17 @@ class TapNet(nn.Module):
                         x_conv = self.conv_1_models[i](x[:, self.idx[i], :])
                         x_conv = self.conv_bn_1(x_conv)
                         x_conv = F.leaky_relu(x_conv)
-                        x_conv = self.seblock(x_conv)
+                        x_conv = self.seblock_1(x_conv)
 
                         x_conv = self.conv_2(x_conv)
                         x_conv = self.conv_bn_2(x_conv)
                         x_conv = F.leaky_relu(x_conv)
-                        x_conv = self.seblock(x_conv)
+                        x_conv = self.seblock_2(x_conv)
 
                         x_conv = self.conv_3(x_conv)
                         x_conv = self.conv_bn_3(x_conv)
                         x_conv = F.leaky_relu(x_conv)
-                        x_conv = self.seblock(x_conv)
+                        x_conv = self.seblock_3(x_conv)
 
                         x_conv = torch.mean(x_conv, 2)
 
@@ -160,17 +162,17 @@ class TapNet(nn.Module):
                     x_conv = self.conv_1(x_conv)  # N * C * L
                     x_conv = self.conv_bn_1(x_conv)
                     x_conv = F.leaky_relu(x_conv)
-                    x_conv = self.seblock(x_conv)
+                    x_conv = self.seblock_1(x_conv)
 
                     x_conv = self.conv_2(x_conv)
                     x_conv = self.conv_bn_2(x_conv)
                     x_conv = F.leaky_relu(x_conv)
-                    x_conv = self.seblock(x_conv)
+                    x_conv = self.seblock_2(x_conv)
 
                     x_conv = self.conv_3(x_conv)
                     x_conv = self.conv_bn_3(x_conv)
                     x_conv = F.leaky_relu(x_conv)
-                    x_conv = self.seblock(x_conv)
+                    x_conv = self.seblock_3(x_conv)
 
                     x_conv = x_conv.view(N, -1)
 
