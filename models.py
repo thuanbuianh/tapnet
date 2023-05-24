@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils import euclidean_dist, normalize, output_conv_size, dump_embedding
+from utils import euclidean_dist, output_conv_size, dump_embedding
 import numpy as np
 
 class SeBlock(nn.Module):
@@ -48,6 +48,9 @@ class TapNet(nn.Module):
 
             self.lstm_dim = lstm_dim
             self.lstm = nn.LSTM(self.ts_length, self.lstm_dim)
+            self.conv_0 = nn.Conv1d(self.channel, filters[0], kernel_size=kernels[0], dilation=dilation, stride=1, padding=paddings[0])
+            self.conv_bn_0 = nn.BatchNorm1d(filters[0])
+            self.se_lstm = SeBlock(filters[0])
 
             paddings = [0, 0, 0]
             if self.use_rp:
@@ -122,9 +125,13 @@ class TapNet(nn.Module):
         if True:
             N = x.size(0)
 
-            # LSTM
+            # CNN-SE-LSTM
             if self.use_lstm:
-                x_lstm = self.lstm(x)[0]
+                x_lstm = self.conv_0(x)
+                x_lstm = self.conv_bn_0(x_lstm)
+                x_lstm = F.leaky_relu(x_lstm)
+                x_lstm = self.seblock_0(x_lstm)
+                x_lstm = self.lstm(x_lstm)[0]
                 x_lstm = x_lstm.mean(1)
                 x_lstm = x_lstm.view(N, -1)
 
