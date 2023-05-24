@@ -4,78 +4,32 @@ import sklearn
 import sklearn.metrics
 import torch
 import pandas as pd
-import random
 from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import StratifiedShuffleSplit
 from pyts.datasets import fetch_uea_dataset
-import os
-from sktime.datasets import load_from_tsfile_to_dataframe
-from sktime.datatypes._panel._convert import from_nested_to_3d_numpy, from_3d_numpy_to_nested
-from channel_selection.classelbow import ElbowPair # ECP
-from channel_selection.elbow import elbow # ECS..
 
 def boolean_string(s):
     if s not in {'False', 'True'}:
         raise ValueError('Not a valid boolean string')
+
     return s == 'True'
-def standardise(data, mean=None, std=None):
-    if not mean:
-        mean = np.expand_dims(np.mean(data, axis=2), axis=2)
-    if not std:    
-        std = np.expand_dims(np.std(data, axis=2), axis=2)
 
-    return (data - mean) / std, mean, std
-def encode_onehot(labels):
-    classes = set(labels)
-    classes_dict = {c: np.identity(len(classes))[i, :] for i, c in
-                    enumerate(classes)}
-    labels_onehot = np.array(list(map(classes_dict.get, labels)),
-                             dtype=np.int32)
-    return labels_onehot
+def standardise(data, mean=0, std=1, isTest=False):
+    if not isTest:
+        mean = np.mean(data, axis=0)
+        std = np.std(data, axis=0)
+        return (data - mean) / std, mean, std
 
+    return (data - mean) / std
 
-def loaddata(filename):
-    df = pd.read_csv(filename, header=None, delimiter=",")
-    a = np.array(df.as_matrix())
-    return a
-
-
-def load_raw_ts(path, dataset, cs_method, center, nshot, random_state, tensor_format=True):
-    # try:
-    x_train, x_test, y_train, y_test = fetch_uea_dataset(dataset, data_home='data/raw/',return_X_y=True)
-        # x_train = from_3d_numpy_to_nested(np.stack((x_train,1)))
-        # x_test = from_3d_numpy_to_nested(np.stack((x_test,1)))
-    # except:
-    #     path = 'data/raw/'  # Folder with the unzipped dataset
-    #     x_train, y_train = load_from_tsfile_to_dataframe(os.path.join(path, f'{dataset}/{dataset}_TRAIN.ts'))
-    #     x_test, y_test = load_from_tsfile_to_dataframe(os.path.join(path, f'{dataset}/{dataset}_TEST.ts'))
-
-    # if cs_method:
-    #     elb = elbow(distance = 'eu', center=center) if cs_method == 'ecs' else ElbowPair(distance = 'eu', center=center)
-    #     elb = elb.fit(x_train, y_train)
-    #     x_train = elb.transform(x_train)
-    #     x_test = elb.transform(x_test)
-    # x_train = from_nested_to_3d_numpy(x_train)
-    # x_test = from_nested_to_3d_numpy(x_test)
+def load_raw_ts(path, dataset, tensor_format=True):
+    x_train, x_test, y_train, y_test = fetch_uea_dataset(dataset, data_home=path,return_X_y=True)
     x_train, mean, std = standardise(x_train)
-    x_test, _, _ = standardise(x_test, mean, std)
+    x_test = standardise(x_test, mean, std, isTest=True)
     le = LabelEncoder()
     y_train = le.fit_transform(y_train)
     y_test = le.transform(y_test)
-    
-    # if nshot > -1:
-    #     x_train_ori, y_train_ori = x_train, y_train
-    #     sss = StratifiedShuffleSplit(n_splits=1, train_size=nshot*len(np.unique(y_train_ori)), random_state=random_state)
-    #     sss.get_n_splits(x_train_ori, y_train_ori)
-
-    #     for train_index, test_index in sss.split(x_train_ori, y_train_ori):
-    #         x_train = x_train_ori[train_index,:]
-    #         y_train = y_train_ori[train_index]  
-
 
     ts = np.concatenate((x_train, x_test), axis=0)
-    # ts = np.transpose(ts, axes=(0, 2, 1))
     labels = np.concatenate((y_train, y_test), axis=0)
     nclass = int(np.amax(labels)) + 1
 
@@ -88,7 +42,6 @@ def load_raw_ts(path, dataset, cs_method, center, nshot, random_state, tensor_fo
     idx_test = range(train_size, total_size)
 
     if tensor_format:
-        # features = torch.FloatTensor(np.array(features))
         ts = torch.FloatTensor(np.array(ts))
         labels = torch.LongTensor(labels)
 
@@ -97,16 +50,6 @@ def load_raw_ts(path, dataset, cs_method, center, nshot, random_state, tensor_fo
         idx_test = torch.LongTensor(idx_test)
 
     return ts, labels, idx_train, idx_val, idx_test, nclass
-
-
-def normalize(mx):
-    """Row-normalize sparse matrix"""
-    row_sums = mx.sum(axis=1)
-    mx = mx.astype('float32')
-    row_sums_inverse = 1 / row_sums
-    f = mx.multiply(row_sums_inverse)
-    return sp.csr_matrix(f).astype('float32')
-
 
 def accuracy(output, labels):
     preds = output.max(1)[1].cpu().numpy()
@@ -132,9 +75,8 @@ def euclidean_dist(x, y):
 
 
 def output_conv_size(in_size, kernel_size, stride, padding):
-
     output = int((in_size - kernel_size + 2 * padding) / stride) + 1
-
+    
     return output
 
 def dump_embedding(proto_embed, sample_embed, labels, dump_file='./plot/embeddings.txt'):
