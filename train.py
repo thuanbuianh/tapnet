@@ -13,7 +13,9 @@ import torch.nn.functional as F
 
 
 parser = argparse.ArgumentParser()
-
+# model saving setting
+parser.add_argument('--save_path', type=str, default="./models",
+                    help='the path of saving models.')
 # dataset settings
 parser.add_argument('--data_path', type=str, default="./data/raw",
                     help='the path of data.')
@@ -105,7 +107,7 @@ print("Loading dataset", args.dataset, "...")
 model_type = "TapNet" 
 print('='*10, f'{args.dataset}', '='*10)
 if model_type == "TapNet":
-    features, labels, idx_train, idx_val, idx_test, nclass = load_raw_ts(args.data_path, dataset=args.dataset)
+    features, labels, idx_train, idx_val, idx_test, nclass, mean, std = load_raw_ts(args.data_path, dataset=args.dataset)
 
     # update random permutation parameter
     if args.rp_params[0] < 0:
@@ -144,7 +146,7 @@ if model_type == "TapNet":
         #model = nn.DataParallel(model) Used when you have more than one GPU. Sometimes work but not stable
         model.cuda()
         features, labels, idx_train = features.cuda(), labels.cuda(), idx_train.cuda()
-    input = (features, labels, idx_train, idx_val, idx_test)
+    input = (features, labels, idx_train)
 
 # init the optimizer
 optimizer = optim.Adam(model.parameters(),
@@ -154,7 +156,7 @@ optimizer = optim.Adam(model.parameters(),
 # training function
 def train():
     loss_list = [sys.maxsize]
-    test_best_possible, best_so_far = 0.0, sys.maxsize
+    val_best_possible, best_so_far = 0.0, sys.maxsize
     for epoch in range(args.epochs):
 
         t = time.time()
@@ -163,7 +165,7 @@ def train():
 
         output, proto_dist = model(input)
 
-        loss_train = F.cross_entropy(output[idx_train], torch.squeeze(labels[idx_train]))
+        loss_train = F.cross_entropy(output[idx_train], torch.squeeze(labels[idx_train]), label_smoothing=0.05)
         if args.use_metric:
             loss_train = loss_train + args.metric_param * proto_dist
 
@@ -177,27 +179,27 @@ def train():
         loss_train.backward()
         optimizer.step()
 
-        loss_val = F.cross_entropy(output[idx_val], torch.squeeze(labels[idx_val]), label_smoothing=0.05)
-        acc_val = accuracy(output[idx_val], labels[idx_val])
+        loss_test = F.cross_entropy(output[idx_val], torch.squeeze(labels[idx_val]), label_smoothing=0.05)
+        acc_test = accuracy(output[idx_val], labels[idx_val])
 
         print('Epoch: {:04d}'.format(epoch + 1),
             'loss_train: {:.8f}'.format(loss_train.item()),
             'acc_train: {:.4f}'.format(acc_train.item()),
-            'loss_val: {:.4f}'.format(loss_val.item()),
-            'acc_val: {:.4f}'.format(acc_val.item()),
+            'loss_test: {:.4f}'.format(loss_test.item()),
+            'acc_test: {:.4f}'.format(acc_test.item()),
             'time: {:.4f}s'.format(time.time() - t))
 
-        if acc_val.item() > test_best_possible:
-            test_best_possible = acc_val.item()
+        if acc_test.item() > val_best_possible:
+            val_best_possible = acc_test.item()
         if best_so_far > loss_train.item():
             best_so_far = loss_train.item()
-            test_acc = acc_val.item()
-    print("test_acc: " + str(test_acc))
-    print("best possible: " + str(test_best_possible))
+            val_acc = acc_test.item()
+    print("val_acc: " + str(val_acc))
+    print("best possible: " + str(val_best_possible))
+    torch.save(model.state_dict(), args.save_path)
 
 # test function
 def test():
-    f = open(f'tapnet_results/{args.dataset}_nshot_{args.nshot}.txt', 'a+')
     output, proto_dist = model(input)
     loss_test = F.cross_entropy(output[idx_test], torch.squeeze(labels[idx_test]), label_smoothing=0.05)
     if args.use_metric:
@@ -207,14 +209,11 @@ def test():
     print(args.dataset, "Test set results:",
         "loss= {:.4f}".format(loss_test.item()),
         "accuracy= {:.4f}".format(acc_test.item()))
-    print("{:.4f}".format(acc_test.item()), file=f)
+    print("{:.4f}".format(acc_test.item()))
 
 # Train model
-f = open(f'tapnet_results/{args.dataset}_nshot_{args.nshot}_rt.txt', 'a+')
-t_total = time.time()
 train()
 print("Optimization Finished!")
-print("{:.4f}".format(time.time() - t_total), file=f)
 
 # Testing
 test()

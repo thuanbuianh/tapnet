@@ -25,6 +25,7 @@ class SeBlock(nn.Module):
 
         scale = x * f
         return scale
+        
 
 class TapNet(nn.Module):
 
@@ -46,9 +47,10 @@ class TapNet(nn.Module):
             # LSTM
             self.channel = nfeat
             self.ts_length = len_ts
-
             self.lstm_dim = lstm_dim
-            self.lstm = nn.LSTM(self.ts_length, self.lstm_dim, num_layers=2)
+            self.lstm = nn.LSTM(self.ts_length, self.lstm_dim)
+            self.fc = nn.Linear(self.lstm_dim, self.lstm_dim//2)
+
 
             if self.use_rp:
                 self.conv_1_models = nn.ModuleList()
@@ -81,10 +83,10 @@ class TapNet(nn.Module):
                 fc_input += conv_size 
                 #* filters[-1]
             if self.use_lstm:
-                fc_input += conv_size * self.lstm_dim
+                fc_input += conv_size * (self.lstm_dim // 2)
             
             if self.use_rp:
-                fc_input = self.rp_group * filters[2] + self.lstm_dim
+                fc_input = self.rp_group * filters[2] + self.lstm_dim // 2
 
 
         # Representation mapping function
@@ -117,14 +119,15 @@ class TapNet(nn.Module):
 
         
     def forward(self, input):
-        x, labels, idx_train, idx_val, idx_test = input  # x is N * L, where L is the time-series feature dimension
+        x, labels, idx_train = input  # x is N * L, where L is the time-series feature dimension
 
         if True:
             N = x.size(0)
 
-            # CNN-SE-LSTM
+            # LSTM
             if self.use_lstm:
                 x_lstm = self.lstm(x)[0]
+                x_lstm = self.fc(x_lstm)
                 x_lstm = x_lstm.mean(1)
                 x_lstm = x_lstm.view(N, -1)
 

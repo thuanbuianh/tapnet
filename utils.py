@@ -48,8 +48,38 @@ def load_raw_ts(path, dataset, tensor_format=True):
         idx_train = torch.LongTensor(idx_train)
         idx_val = torch.LongTensor(idx_val)
         idx_test = torch.LongTensor(idx_test)
+    
+    return ts, labels, idx_train, idx_val, idx_test, nclass, mean, std
 
-    return ts, labels, idx_train, idx_val, idx_test, nclass
+def load_test_ts(path, dataset, data_home='./data/raw', tensor_format=True):
+    x_train, _, y_train, _ = fetch_uea_dataset(dataset, data_home=path,return_X_y=True)
+    x_train, mean, std = standardise(x_train)
+    x_test = np.loadtxt(path, delimiter=',')
+    x_test = standardise(x_test, mean, std, isTest=True)
+
+    le = LabelEncoder()
+    y_train = le.fit_transform(y_train)
+    y_test = np.array([-1])
+
+    ts = np.concatenate((x_train, x_test), axis=0)
+    labels = np.concatenate((y_train, y_test), axis=0)
+
+    train_size = y_train.shape[0]
+    total_size = labels.shape[0]
+    idx_train = range(train_size)
+    idx_test = range(train_size, total_size)
+
+    if tensor_format:
+        ts = torch.FloatTensor(np.array(ts))
+        labels = torch.LongTensor(labels)
+
+        idx_train = torch.LongTensor(idx_train)
+        idx_val = torch.LongTensor(idx_val)
+        idx_test = torch.LongTensor(idx_test)
+
+
+    return ts, labels, idx_train, idx_test
+
 
 def accuracy(output, labels):
     preds = output.max(1)[1].cpu().numpy()
