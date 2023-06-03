@@ -83,10 +83,10 @@ class TapNet(nn.Module):
                 fc_input += conv_size 
                 #* filters[-1]
             if self.use_lstm:
-                fc_input += conv_size * (self.lstm_dim // 2)
+                fc_input += conv_size * self.lstm_dim
             
             if self.use_rp:
-                fc_input = self.rp_group * filters[2] + self.lstm_dim // 2
+                fc_input = self.rp_group * filters[2] + self.lstm_dim 
 
 
         # Representation mapping function
@@ -127,7 +127,7 @@ class TapNet(nn.Module):
             # LSTM
             if self.use_lstm:
                 x_lstm = self.lstm(x)[0]
-                x_lstm = self.fc(x_lstm)
+                # x_lstm = self.fc(x_lstm)
                 x_lstm = x_lstm.mean(1)
                 x_lstm = x_lstm.view(N, -1)
 

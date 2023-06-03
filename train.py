@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--save_path', type=str, default="./models",
                     help='the path of saving models.')
 # dataset settings
-parser.add_argument('--data_path', type=str, default="./data/raw",
+parser.add_argument('--data_path', type=str, default="./data/raw/",
                     help='the path of data.')
 parser.add_argument('--dataset', type=str, default="NATOPS", #NATOPS
                     help='time series dataset. Options: See the datasets list')
@@ -196,20 +196,20 @@ def train():
             val_acc = acc_test.item()
     print("val_acc: " + str(val_acc))
     print("best possible: " + str(val_best_possible))
-    torch.save(model.state_dict(), args.save_path)
+    torch.save(model.state_dict(), f'{args.save_path}/{args.dataset}.pth')
 
 # test function
 def test():
+    model.eval()
     output, proto_dist = model(input)
     loss_test = F.cross_entropy(output[idx_test], torch.squeeze(labels[idx_test]), label_smoothing=0.05)
     if args.use_metric:
         loss_test = loss_test - args.metric_param * proto_dist
 
     acc_test = accuracy(output[idx_test], labels[idx_test])
-    print(args.dataset, "Test set results:",
+    print("Test set results:",
         "loss= {:.4f}".format(loss_test.item()),
         "accuracy= {:.4f}".format(acc_test.item()))
-    print("{:.4f}".format(acc_test.item()))
 
 # Train model
 train()

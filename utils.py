@@ -1,9 +1,7 @@
 import numpy as np
-import scipy.sparse as sp
 import sklearn
 import sklearn.metrics
 import torch
-import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from pyts.datasets import fetch_uea_dataset
 
@@ -51,10 +49,11 @@ def load_raw_ts(path, dataset, tensor_format=True):
     
     return ts, labels, idx_train, idx_val, idx_test, nclass, mean, std
 
-def load_test_ts(path, dataset, data_home='./data/raw', tensor_format=True):
-    x_train, _, y_train, _ = fetch_uea_dataset(dataset, data_home=path,return_X_y=True)
+def load_test_ts(path, dataset, data_home='./data/raw/', tensor_format=True):
+    x_train, _, y_train, _ = fetch_uea_dataset(dataset, data_home=data_home,return_X_y=True)
     x_train, mean, std = standardise(x_train)
     x_test = np.loadtxt(path, delimiter=',')
+    x_test = np.expand_dims(x_test, axis=0)
     x_test = standardise(x_test, mean, std, isTest=True)
 
     le = LabelEncoder()
@@ -74,11 +73,10 @@ def load_test_ts(path, dataset, data_home='./data/raw', tensor_format=True):
         labels = torch.LongTensor(labels)
 
         idx_train = torch.LongTensor(idx_train)
-        idx_val = torch.LongTensor(idx_val)
         idx_test = torch.LongTensor(idx_test)
 
 
-    return ts, labels, idx_train, idx_test
+    return ts, labels, idx_train, idx_test, le
 
 
 def accuracy(output, labels):
