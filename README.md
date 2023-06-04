@@ -21,8 +21,13 @@ With these modifications, some datasets are used to evaluate the performances. T
 A basic interface is also developed by using Streamlit.
 
 ## Installation
-1. To train models, please follow instructions in this [notebook](https://colab.research.google.com/drive/1nB46gCefj7yhCyCRduVeFHaNfITGha2U?usp=sharing).
-2. To install the application for testing, please build a image from the Docker file (it will take approximately 5~6 minutes)
+- To train models, please follow instructions in this [notebook](https://colab.research.google.com/drive/1nB46gCefj7yhCyCRduVeFHaNfITGha2U?usp=sharing).
+- To install the application for testing, please follow these steps:
+1. Clone this repository
+```
+git clone https://github.com/thuanbuianh/Enhancing-Attentional-Prototype-Network-with-Squeeze-and-Excitation-Blocks.git
+```
+2. Build a image from the Docker file (it will take approximately 5~6 minutes)
 ```
 docker build -t <your-image-name> .
 ```
