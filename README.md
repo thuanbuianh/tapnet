@@ -1,42 +1,42 @@
-# TapNet
+# Enhancing Attentional Prototype Network with Squeeze-and-Excitation Blocks.
 
+## Introduction
+This is a Pytorch implementation of a multivariate time series classification method based on Attentional Prototype Network for the paper **TapNet: Multivariate Time Series Classification with Attentional Prototype Network** and Squeeze-and-Excitation blocks for the paper **Squeeze-and-Excitation Networks**.
 
-This is a Pytorch implementation of Attentional Prototype Network for the paper **TapNet: Multivariate Time Series Classification with Attentional Prototype Network** published in AAAI 2020.
+## Technical Overview
+There are 2 modifications between this version (SE-TapNet) and the original Attentional Prototype Network (TapNet):
+- Stacking Squeeze-and-Excitation (SE) blocks after each convolutional layer to enhance the performance of the model.
+- Standardising time series.
+With these modifications, some datasets are used to evaluate the performances. The results are below:
 
-## Run the demo
+|          Dataset          |   TapNet  |  SE-TapNet |
+|:-------------------------:|:---------:|:----------:|
+| ArticularyWordRecognition | **0.987** |    0.983   |
+|     AtrialFibrillation    |   0.333   |    0.333   |
+|        BasicMotions       |     1     |      1     |
+|   HandMovementDirection   |   0.378   | **0.5946** |
+|           NATOPS          |   0.939   | **0.9667** |
+|          PEMS-SF          |   0.751   | **0.8382** |
 
-```bash
-python train.py --dataset <DATASET>
+A basic interface is also developed by using Streamlit.
+
+## Installation
+1. To train models, please follow instructions in this [notebook](https://colab.research.google.com/drive/1nB46gCefj7yhCyCRduVeFHaNfITGha2U?usp=sharing).
+2. To install the application for testing, please build a image from the Docker file (it will take approximately 5~6 minutes)
 ```
-You can find all the parameters we used in the file `run.sh`.
-
-## Data
-
-**[NEWS] You can download all the preprocessed data from [Google Drive](https://drive.google.com/file/d/1xZswfMeZuWovExsXh7U8T9uamlj6cQ85/view?usp=sharing).**
-
-We use the latest multivariate time series classification dataset from [UAE archive](http://timeseriesclassification.com) with 30 datasets in wide range of applications.
-
-The raw data is converted into npy data files in the following format:
-* Training Samples: an N by M by L tensor (N is the training size of time series, M is the multivariate dimension, L is the length of time series),
-* Train labels: an N by 1 vector (N is the training size of time series)
-* Testing Samples: an N by M by L tensor (N is the testing size of time series, M is the multivariate dimension, L is the length of time series),
-* Testing labels: an N by 1 vector (N is the testing size of time series)
-
-
-You can specify a dataset as follows:
-
-```bash
-python train.py --dataset NATOPS
+docker build -t <your-image-name> .
 ```
+## Usage
+Please follow these steps in order to install and use Streamlit UI for testing:
+1. Run the image built in previous step
+```
+docker run -p 8051:8051 <your-image-name>
+```
+2. Browse to [http://localhost:8501](http://localhost:8501) to access the Streamlit UI.
+3. Choose a dataset and upload your test file. Note that the test file should contain only ONE multivariate time series and must be in csv format. You can use test files in test folder.
 
-(or by editing `train.py`)
-
-The default data is located at './data'.
-
-
+For demo purpose, only 3 datasets having high accuracy (**ArticularyWordRecognition**, **BasicMotions** and **NATOPS**) are available for testing. 
 ## Paper
-
-if you use our code in this repo, please cite our paper `\cite{zhang2020tapnet}`.
 
 ```
 @inproceedings{zhang2020tapnet,
@@ -45,5 +45,14 @@ if you use our code in this repo, please cite our paper `\cite{zhang2020tapnet}`
   booktitle={AAAI},
   pages={6845--6852},
   year={2020}
+}
+```
+```
+@inproceedings{hu2018squeeze,
+  title={Squeeze-and-excitation networks},
+  author={Hu, Jie and Shen, Li and Sun, Gang},
+  booktitle={Proceedings of the IEEE conference on computer vision and pattern recognition},
+  pages={7132--7141},
+  year={2018}
 }
 ```
