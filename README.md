@@ -39,7 +39,7 @@ docker build -t <your-image-name> .
 Please follow these steps in order to install and use Streamlit UI for testing:
 1. Run the image built in previous step
 ```
-docker run -p 8051:8051 <your-image-name>
+docker run -p 8501:8501 <your-image-name>
 ```
 2. Browse to [http://localhost:8501](http://localhost:8501) to access the Streamlit UI.
 3. Choose a dataset and upload your test file. Note that the test file should contain only ONE multivariate time series and must be in csv format. You can use test files in test folder.
