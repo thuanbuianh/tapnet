@@ -27,7 +27,11 @@ A basic interface is also developed by using Streamlit.
 ```
 git clone https://github.com/thuanbuianh/Enhancing-Attentional-Prototype-Network-with-Squeeze-and-Excitation-Blocks.git
 ```
-2. Build a image from the Docker file (it will take approximately 5~6 minutes)
+2. Change working directory to the repo
+```
+cd Enhancing-Attentional-Prototype-Network-with-Squeeze-and-Excitation-Blocks
+```
+3. Build a image from the Docker file (it will take approximately 5~6 minutes)
 ```
 docker build -t <your-image-name> .
 ```
